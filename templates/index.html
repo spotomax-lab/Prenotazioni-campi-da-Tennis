@@ -63,8 +63,27 @@
           end: b.end
         })),
         select: function(info) {
-          // Compila il form automaticamente
+          // Compila la data di inizio
           document.getElementById('start').value = info.startStr.substring(0,16);
+
+          // Calcola durata in minuti dall'intervallo selezionato
+          let diffMs = new Date(info.end) - new Date(info.start);
+          let diffMinutes = diffMs / 60000;
+
+          // Imposta il valore della durata nel menu a tendina (se esiste come opzione)
+          let durationSelect = document.getElementById('duration');
+          let option = Array.from(durationSelect.options).find(o => parseInt(o.value) === diffMinutes);
+
+          if (option) {
+            durationSelect.value = diffMinutes;
+          } else {
+            // Se la durata non è presente tra le opzioni, la aggiunge
+            let newOption = document.createElement('option');
+            newOption.value = diffMinutes;
+            newOption.text = diffMinutes + " minuti";
+            durationSelect.appendChild(newOption);
+            durationSelect.value = diffMinutes;
+          }
         },
         datesSet: function(info) {
           // Aggiorna il titolo includendo il campo selezionato
