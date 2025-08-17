@@ -8,14 +8,12 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     #calendar { max-width: 900px; margin: 40px auto; }
-    form { margin: 20px 0; }
+    form { margin: 20px 0; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
     label { display: block; margin-top: 10px; }
   </style>
 </head>
 <body>
   <h1>Sistema di Prenotazioni Campi da Tennis</h1>
-
-  <div id="calendar"></div>
 
   <h2>Nuova Prenotazione</h2>
   <form id="bookingForm">
@@ -42,6 +40,8 @@
     <button type="submit">Prenota</button>
   </form>
 
+  <div id="calendar"></div>
+
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       let calendarEl = document.getElementById('calendar');
@@ -49,13 +49,18 @@
 
       let calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
+        selectable: true,
         slotMinTime: "{{ open_time }}",
         slotMaxTime: "{{ close_time }}",
         events: bookings.map(b => ({
           title: b.user + " (" + b.court + ")",
           start: b.start,
           end: b.end
-        }))
+        })),
+        select: function(info) {
+          // Compila il form automaticamente
+          document.getElementById('start').value = info.startStr.substring(0,16);
+        }
       });
 
       calendar.render();
@@ -86,3 +91,4 @@
   </script>
 </body>
 </html>
+
