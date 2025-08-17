@@ -52,6 +52,11 @@
         selectable: true,
         slotMinTime: "{{ open_time }}",
         slotMaxTime: "{{ close_time }}",
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'timeGridDay,timeGridWeek,dayGridMonth'
+        },
         events: bookings.map(b => ({
           title: b.user + " (" + b.court + ")",
           start: b.start,
@@ -60,10 +65,27 @@
         select: function(info) {
           // Compila il form automaticamente
           document.getElementById('start').value = info.startStr.substring(0,16);
+        },
+        datesSet: function(info) {
+          // Aggiorna il titolo includendo il campo selezionato
+          let court = document.getElementById('court').value;
+          let titleEl = calendarEl.querySelector('.fc-toolbar-title');
+          if (titleEl) {
+            titleEl.innerText = court + ": " + info.view.title;
+          }
         }
       });
 
       calendar.render();
+
+      // Aggiorna il titolo quando cambio campo dal menu
+      document.getElementById('court').addEventListener('change', function() {
+        let view = calendar.view;
+        let titleEl = calendarEl.querySelector('.fc-toolbar-title');
+        if (titleEl) {
+          titleEl.innerText = this.value + ": " + view.title;
+        }
+      });
 
       // Gestione form prenotazione
       document.getElementById('bookingForm').addEventListener('submit', async function(e) {
@@ -91,4 +113,3 @@
   </script>
 </body>
 </html>
-
