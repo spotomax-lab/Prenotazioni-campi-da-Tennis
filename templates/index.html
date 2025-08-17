@@ -1,134 +1,99 @@
 <!DOCTYPE html>
-<html lang="it">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Sistema di Prenotazioni Campi da Tennis</title>
-  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #calendar { max-width: 900px; margin: 40px auto; }
-    form { margin: 20px 0; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
-    label { display: block; margin-top: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Sistema di Prenotazioni Campi da Tennis Capaci</title>
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
+    <style>
+        #calendar {
+            max-width: 900px;
+            margin: 40px auto;
+        }
+        #bookingForm {
+            max-width: 900px;
+            margin: 20px auto;
+        }
+    </style>
 </head>
 <body>
-  <h1>Sistema di Prenotazioni Campi da Tennis</h1>
+    <h1>Sistema di Prenotazioni Campi da Tennis</h1>
 
-  <h2>Nuova Prenotazione</h2>
-  <form id="bookingForm">
-    <label>Nome Giocatore:
-      <input type="text" id="user" required>
-    </label>
-    <label>Campo:
-      <select id="court">
-        {% for court in courts %}
-          <option value="{{ court }}">{{ court }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Data e Ora Inizio:
-      <input type="datetime-local" id="start" required>
-    </label>
-    <label>Durata:
-      <select id="duration">
-        {% for d in durations %}
-          <option value="{{ d }}">{{ d }} minuti</option>
-        {% endfor %}
-      </select>
-    </label>
-    <button type="submit">Prenota</button>
-  </form>
+    <!-- Selezione campo e titolo dinamico -->
+    <label for="courtSelect">Campo:</label>
+    <select id="courtSelect">
+        <option value="Campo 1">Campo 1</option>
+        <option value="Campo 2">Campo 2</option>
+    </select>
+    <h2 id="calendarTitle">Campo 1: Aug 17 – 23, 2025</h2>
 
-  <div id="calendar"></div>
+    <div id="calendar"></div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      let calendarEl = document.getElementById('calendar');
-      let bookings = JSON.parse('{{ bookings_json | safe }}');
+    <!-- Form per inserimento dati giocatore -->
+    <div id="bookingForm">
+        <h3>Nuova Prenotazione</h3>
+        <label>Nome Giocatore: <input type="text" id="playerName"></label><br>
+        <label>Durata: 
+            <select id="durationSelect">
+                <option value="60">60 minuti</option>
+                <option value="90">90 minuti</option>
+                <option value="120">120 minuti</option>
+            </select>
+        </label><br>
+        <button id="bookButton">Prenota</button>
+    </div>
 
-      let calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'timeGridWeek',
-        selectable: true,
-        slotMinTime: "{{ open_time }}",
-        slotMaxTime: "{{ close_time }}",
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'timeGridDay,timeGridWeek,dayGridMonth'
-        },
-        events: bookings.map(b => ({
-          title: b.user + " (" + b.court + ")",
-          start: b.start,
-          end: b.end
-        })),
-        select: function(info) {
-          // Compila la data di inizio
-          document.getElementById('start').value = info.startStr.substring(0,16);
+    <script>
+        let calendarEl = document.getElementById('calendar');
+        let selectedCourt = document.getElementById("courtSelect").value;
+        let selectedEvent = null;
+        let currentWeekRange = 'Aug 17 – 23, 2025'; // Puoi calcolare dinamicamente con FullCalendar se vuoi
 
-          // Calcola durata in minuti dall'intervallo selezionato
-          let diffMs = new Date(info.end) - new Date(info.start);
-          let diffMinutes = diffMs / 60000;
+        let calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            selectable: true,
+            events: [], // inizialmente vuoto
+            select: function(info) {
+                // Reset precedente selezione
+                if(selectedEvent) selectedEvent.remove();
 
-          // Imposta il valore della durata nel menu a tendina (se esiste come opzione)
-          let durationSelect = document.getElementById('duration');
-          let option = Array.from(durationSelect.options).find(o => parseInt(o.value) === diffMinutes);
+                let playerName = document.getElementById("playerName").value;
+                let duration = parseInt(document.getElementById("durationSelect").value);
 
-          if (option) {
-            durationSelect.value = diffMinutes;
-          } else {
-            // Se la durata non è presente tra le opzioni, la aggiunge
-            let newOption = document.createElement('option');
-            newOption.value = diffMinutes;
-            newOption.text = diffMinutes + " minuti";
-            durationSelect.appendChild(newOption);
-            durationSelect.value = diffMinutes;
-          }
-        },
-        datesSet: function(info) {
-          // Aggiorna il titolo includendo il campo selezionato
-          let court = document.getElementById('court').value;
-          let titleEl = calendarEl.querySelector('.fc-toolbar-title');
-          if (titleEl) {
-            titleEl.innerText = court + ": " + info.view.title;
-          }
-        }
-      });
+                let endTime = new Date(info.start);
+                endTime.setMinutes(endTime.getMinutes() + duration);
 
-      calendar.render();
-
-      // Aggiorna il titolo quando cambio campo dal menu
-      document.getElementById('court').addEventListener('change', function() {
-        let view = calendar.view;
-        let titleEl = calendarEl.querySelector('.fc-toolbar-title');
-        if (titleEl) {
-          titleEl.innerText = this.value + ": " + view.title;
-        }
-      });
-
-      // Gestione form prenotazione
-      document.getElementById('bookingForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        let user = document.getElementById('user').value;
-        let court = document.getElementById('court').value;
-        let start = document.getElementById('start').value;
-        let duration = document.getElementById('duration').value;
-
-        let res = await fetch("/book", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user, court, start, duration })
+                selectedEvent = calendar.addEvent({
+                    title: playerName ? playerName : 'Prenotazione',
+                    start: info.start,
+                    end: endTime,
+                    backgroundColor: '#ff9f89'
+                });
+            }
         });
 
-        let data = await res.json();
-        if (data.status === "ok") {
-          alert("Prenotazione confermata!");
-          location.reload();
-        } else {
-          alert("Errore: " + data.message);
-        }
-      });
-    });
-  </script>
+        calendar.render();
+
+        // Aggiorna titolo e reset selezione quando cambio campo
+        document.getElementById("courtSelect").addEventListener("change", function() {
+            selectedCourt = this.value;
+            document.getElementById("calendarTitle").innerText = selectedCourt + ": " + currentWeekRange;
+
+            if(selectedEvent) {
+                selectedEvent.remove();
+                selectedEvent = null;
+            }
+        });
+
+        // Pulsante "Prenota" finale (puoi collegarlo a Flask)
+        document.getElementById("bookButton").addEventListener("click", function() {
+            if(selectedEvent) {
+                alert("Prenotazione confermata per " + selectedEvent.title + " su " + selectedCourt);
+                selectedEvent = null; // reset selezione dopo conferma
+            } else {
+                alert("Seleziona un orario prima di prenotare!");
+            }
+        });
+    </script>
 </body>
 </html>
