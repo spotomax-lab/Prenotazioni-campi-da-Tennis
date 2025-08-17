@@ -1,0 +1,68 @@
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Amministrazione</title>
+    <style>
+      body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;margin:0;background:#f6f7fb;color:#111}
+      .wrap{max-width:900px;margin:40px auto;background:#fff;padding:16px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+      input,button{padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;font-size:14px}
+      button{background:#0ea5e9;color:white;border:none;cursor:pointer}
+      table{width:100%;border-collapse:collapse;margin-top:16px}
+      th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2>Area Amministratore</h2>
+      <div>
+        <input id="password" type="password" placeholder="Password admin">
+        <button id="loginBtn">Entra</button>
+        <button id="exportBtn" class="hidden">Esporta JSON</button>
+      </div>
+      <table id="tbl" class="hidden">
+        <thead><tr><th>ID</th><th>Campo</th><th>Inizio</th><th>Fine</th><th>Nome</th><th>Contatto</th><th>Codice</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <script>
+      const loginBtn = document.getElementById('loginBtn');
+      const exportBtn = document.getElementById('exportBtn');
+      const tbl = document.getElementById('tbl');
+      loginBtn.onclick = async () => {
+        const password = document.getElementById('password').value;
+        const r = await fetch('/admin/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password})});
+        if(r.ok){
+          exportBtn.classList.remove('hidden');
+          tbl.classList.remove('hidden');
+          load(password);
+        } else {
+          alert('Password errata');
+        }
+      };
+      exportBtn.onclick = async () => {
+        const password = document.getElementById('password').value;
+        const r = await fetch('/api/admin/export?password='+encodeURIComponent(password));
+        const data = await r.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'prenotazioni.json'; a.click();
+        URL.revokeObjectURL(url);
+      };
+      async function load(password){
+        const r = await fetch('/api/admin/export?password='+encodeURIComponent(password));
+        const data = await r.json();
+        const tbody = tbl.querySelector('tbody');
+        tbody.innerHTML = '';
+        data.forEach(b => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${b.id}</td><td>${b.court}</td><td>${new Date(b.start_utc+'Z').toLocaleString()}</td><td>${new Date(b.end_utc+'Z').toLocaleString()}</td><td>${b.name}</td><td>${b.contact||''}</td><td>${b.cancel_code}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+    </script>
+  </body>
+</html>
