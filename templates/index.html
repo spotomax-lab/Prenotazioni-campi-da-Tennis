@@ -57,16 +57,21 @@
         locale: 'it',
         slotMinTime: '{{ open_time }}',
         slotMaxTime: '{{ close_time }}',
+        selectable: true,
         events: [
-          {% for court, slots in bookings.items() %}
-            {% for start in slots %}
-              {
-                title: '{{ court }}',
-                start: '{{ start }}'
-              },
-            {% endfor %}
+          {% for b in bookings %}
+            {
+              title: '{{ b["court"] }}',
+              start: '{{ b["start"] }}',
+              end: '{{ b["end"] }}'
+            },
           {% endfor %}
-        ]
+        ],
+        dateClick: function(info) {
+          // Compila automaticamente il form quando clicchi sul calendario
+          document.getElementById("start").value = info.dateStr.substring(0,16);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       });
 
       calendar.render();
