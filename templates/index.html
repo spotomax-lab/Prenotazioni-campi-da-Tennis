@@ -16,12 +16,12 @@
 <body>
   <h1>Sistema di Prenotazioni Campi da Tennis</h1>
 
-  <h3>Orari di Apertura</h3>
-  <p>Dal: {{ open_time }} | Al: {{ close_time }}</p>
-
   <div class="form-container">
     <h3>Nuova Prenotazione</h3>
     <form id="bookingForm">
+      <label>Nome Giocatore:
+        <input type="text" id="user" required>
+      </label>
       <label>Campo:
         <select id="court">
           {% for court in courts %}
@@ -29,11 +29,9 @@
           {% endfor %}
         </select>
       </label>
-
       <label>Data e Ora Inizio:
         <input type="datetime-local" id="start" required>
       </label>
-
       <label>Durata:
         <select id="duration">
           {% for d in durations %}
@@ -41,7 +39,6 @@
           {% endfor %}
         </select>
       </label>
-
       <button type="submit">Prenota</button>
     </form>
   </div>
@@ -61,14 +58,13 @@
         events: [
           {% for b in bookings %}
             {
-              title: '{{ b["court"] }}',
-              start: '{{ b["start"] }}',
-              end: '{{ b["end"] }}'
+              title: b.user + " (" + b.court + ")",
+              start: '{{ b.start }}',
+              end: '{{ b.end }}'
             },
           {% endfor %}
         ],
         dateClick: function(info) {
-          // Compila automaticamente il form quando clicchi sul calendario
           document.getElementById("start").value = info.dateStr.substring(0,16);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -76,29 +72,27 @@
 
       calendar.render();
 
-      // Gestione form di prenotazione
       document.getElementById("bookingForm").addEventListener("submit", async function(e) {
         e.preventDefault();
-
         const court = document.getElementById("court").value;
+        const user = document.getElementById("user").value.trim();
         const start = document.getElementById("start").value;
         const duration = document.getElementById("duration").value;
 
         const response = await fetch("/book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ court, start, duration })
+          body: JSON.stringify({ court, user, start, duration })
         });
 
         const result = await response.json();
-
         if (response.status === 200 && result.status === "ok") {
-          alert("Prenotazione effettuata con successo!");
+          alert("Prenotazione fatta con successo!");
           location.reload();
         } else if (response.status === 409) {
-          alert("Errore: slot già prenotato!");
+          alert("Errore: slot già occupato!");
         } else {
-          alert("Errore imprevisto, riprova.");
+          alert("Errore, riprova.");
         }
       });
     });
