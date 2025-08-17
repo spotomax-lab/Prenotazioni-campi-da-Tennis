@@ -1,6 +1,8 @@
 
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timedelta
+import sqlite3
+import os
 
 app = Flask(__name__)
 
@@ -14,11 +16,51 @@ close_time = "22:00:00"
 # Durate consentite in minuti
 durations = [60, 90, 120]
 
-# Prenotazioni: lista di dizionari con start e end
-bookings = []
+DB_FILE = "bookings.db"
+
+# --- FUNZIONI DATABASE ---
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            court TEXT NOT NULL,
+            start TEXT NOT NULL,
+            end TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_bookings():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT court, start, end FROM bookings")
+    rows = cur.fetchall()
+    conn.close()
+    bookings = []
+    for r in rows:
+        bookings.append({
+            "court": r[0],
+            "start": r[1],
+            "end": r[2]
+        })
+    return bookings
+
+def add_booking(court, start, end):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("INSERT INTO bookings (court, start, end) VALUES (?, ?, ?)", (court, start, end))
+    conn.commit()
+    conn.close()
+
+# Inizializza DB alla partenza
+init_db()
 
 @app.route("/")
 def index():
+    bookings = get_bookings()
     return render_template(
         "index.html",
         courts=courts,
@@ -40,6 +82,7 @@ def book():
     end = start + timedelta(minutes=duration)
 
     # verifica sovrapposizione prenotazioni
+    bookings = get_bookings()
     for b in bookings:
         if b["court"] == court:
             existing_start = datetime.fromisoformat(b["start"])
@@ -48,11 +91,7 @@ def book():
                 return jsonify({"status": "error", "message": "Slot già prenotato"}), 409
 
     # aggiungi nuova prenotazione
-    bookings.append({
-        "court": court,
-        "start": start.isoformat(),
-        "end": end.isoformat()
-    })
+    add_booking(court, start.isoformat(), end.isoformat())
 
     return jsonify({"status": "ok"})
 
